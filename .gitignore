@@ -178,3 +178,6 @@ ai-session*
 .openai*
 ollama*
 .llm*
+
+# Research papers
+researchpaper/
