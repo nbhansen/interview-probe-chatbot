@@ -182,5 +182,3 @@ Jacobsen, R. M., Cox, S. R., Griggio, C. F., & van Berkel, N. (2025). Chatbots f
 - Build tool: Turbopack (stable)
 - React version: 19.2 with React Compiler support
 - Deployment: Standard Next.js deployment options (Vercel, Docker, etc.)
-
-For detailed architecture documentation, see `CLAUDE.md`.
