@@ -6,6 +6,13 @@
  */
 
 /**
+ * Simple sleep helper for retry delays
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
  * OpenAI Provider
  */
 async function openaiProvider(messages, apiKey, model) {
@@ -104,7 +111,7 @@ const providers = {
 };
 
 /**
- * Send message to configured AI provider
+ * Send message to configured AI provider with retry logic
  *
  * @param {Array} messages - Array of message objects with role and content
  * @param {string} provider - Provider name (openai, gemini)
@@ -125,5 +132,29 @@ export async function sendMessage(messages, provider, apiKey, model) {
     throw new Error(`Model name is required for provider: ${provider}`);
   }
 
-  return providers[provider](messages, apiKey, model);
+  // Simple retry logic: try up to 3 times with 1 second delay
+  const maxRetries = 3;
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await providers[provider](messages, apiKey, model);
+    } catch (error) {
+      lastError = error;
+
+      // Only retry on 503 errors (Service Unavailable)
+      const is503Error = error.message && error.message.includes('503');
+
+      if (is503Error && attempt < maxRetries) {
+        console.log(`API attempt ${attempt} failed with 503, retrying in 1s...`);
+        await sleep(1000);
+        continue;
+      }
+
+      // Don't retry on other errors or if we've exhausted retries
+      throw error;
+    }
+  }
+
+  throw lastError;
 }
