@@ -1,32 +1,55 @@
-export async function POST(request) {
-  const api_key = process.env.API_KEY;
-  
-  const messages = await request.json()
+import { sendMessage } from "@/lib/ai-providers";
 
-  const payload = {
-    model: "gpt-4o",
-    messages: messages
+export async function POST(request) {
+  // Get configuration from environment variables
+  const provider = process.env.AI_PROVIDER || "openai";
+  const apiKey = process.env.API_KEY;
+  const model = process.env.MODEL_NAME;
+
+  // Validate required configuration
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({ error: "API_KEY not configured in environment" }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 500
+      }
+    );
+  }
+
+  if (!model) {
+    return new Response(
+      JSON.stringify({ error: "MODEL_NAME not configured in environment" }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 500
+      }
+    );
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + api_key,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    const messages = await request.json();
 
-    const data = await response.json();
+    // Send message through configured provider
+    const data = await sendMessage(messages, provider, apiKey, model);
 
     return new Response(JSON.stringify(data), {
       headers: {
         "Content-Type": "application/json"
       },
       status: 201
-    })
+    });
   } catch (error) {
     console.error("Error fetching data:", error);
+
+    return new Response(
+      JSON.stringify({
+        error: error.message || "Failed to process AI request"
+      }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 500
+      }
+    );
   }
 }
