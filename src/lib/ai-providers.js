@@ -62,13 +62,14 @@ async function geminiProvider(messages, apiKey, model) {
     payload.systemInstruction = systemInstruction;
   }
 
-  // Gemini API endpoint
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  // Gemini API endpoint (API key now goes in header, not URL)
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
     },
     body: JSON.stringify(payload),
   });

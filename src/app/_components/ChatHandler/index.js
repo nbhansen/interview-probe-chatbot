@@ -6,17 +6,15 @@ import { sendMessageToParent } from "@/utils/iframeConnector";
 import { addTimeStamp } from "@/utils/addTimeStamp";
 import Chat from "@/app/_components/Chat";
 import TypingIndicator from "@/app/_components/TypingIndicator";
+import ParticipantIdModal from "@/app/_components/ParticipantIdModal";
 
-const dummyData = {
-  content: "I am the AI, as a test message",
-  role: "assistant",
-};
-
-const ChatHandler = ({ prompt, initialMessage, InputArea, a, p }) => {
+const ChatHandler = ({ prompt, initialMessage, InputArea, a, p, condition }) => {
+  const [participantId, setParticipantId] = useState(null);
   const [messages, setMessages] = useState([addTimeStamp(initialMessage)]);
   const [isTyping, setIsTyping] = useState(false);
   const [inputChanged, setInputChanged] = useState(0);
   const [chatEnded, setChatEnded] = useState(false);
+  const [conversationStartTime] = useState(Date.now());
 
   const inputAreaRef = useRef(null);
 
@@ -31,7 +29,6 @@ const ChatHandler = ({ prompt, initialMessage, InputArea, a, p }) => {
 
   const sendMessage = async (newMessage) => {
     if (newMessage.replace(".", "").toLowerCase().trim() === "goodbye") {
-      sendToQualtrics();
       console.log(newMessage);
       const goodbyeParticipantMessage = {
         role: "user",
@@ -41,15 +38,20 @@ const ChatHandler = ({ prompt, initialMessage, InputArea, a, p }) => {
       const goodbyeAssistantMessage = {
         role: "assistant",
         content:
-          "Ok, thank you for your answers. You may continue through the button below the chat.",
+          "Ok, thank you for your answers. Your conversation has been saved. You may continue through the button below the chat.",
       };
 
-      setMessages([
+      const finalMessages = [
         ...messages,
         goodbyeParticipantMessage,
         goodbyeAssistantMessage,
-      ]);
+      ];
+
+      setMessages(finalMessages);
       setChatEnded(true);
+
+      // Save transcript after messages are updated
+      setTimeout(() => saveTranscript(), 100);
       return;
     }
 
@@ -87,38 +89,81 @@ const ChatHandler = ({ prompt, initialMessage, InputArea, a, p }) => {
     };
   };
 
-  const sendToQualtrics = () => {
-    const payload = {
+  const saveTranscript = async () => {
+    const endTime = Date.now();
+
+    // Save to Qualtrics (existing functionality)
+    const qualtricsPayload = {
       event: "chat",
       messages: messages,
       interviewApplication: a,
       interviewProbe: p,
-      timestamp: Date.now(),
+      timestamp: endTime,
+    };
+    sendMessageToParent(qualtricsPayload);
+
+    // Save to local markdown file
+    const transcriptData = {
+      participantId,
+      topic: condition.t || 'technostress',
+      probe: p,
+      stage: a,
+      messages,
+      startTime: conversationStartTime,
+      endTime,
     };
 
-    sendMessageToParent(payload);
+    try {
+      const response = await fetch('/api/save-transcript', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transcriptData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('Transcript saved successfully:', result.filename);
+      } else {
+        console.error('Failed to save transcript:', result.error);
+      }
+    } catch (error) {
+      console.error('Error saving transcript:', error);
+    }
+  };
+
+  const handleParticipantIdSubmit = (id) => {
+    setParticipantId(id);
   };
 
   return (
-    <div className="chat">
-      <Chat messages={messages} inputChanged={inputChanged} />
-      <div ref={inputAreaRef}>
-        <TypingIndicator isTyping={isTyping} />
-        {!chatEnded && (
-          <>
-            <div
-              style={{
-                height: "1px",
-                backgroundColor: "grey",
-                marginLeft: "8px",
-                marginRight: "8px",
-              }}
-            />
-            <InputArea onSend={sendMessage} />
-          </>
-        )}
+    <>
+      {!participantId && (
+        <ParticipantIdModal onSubmit={handleParticipantIdSubmit} />
+      )}
+
+      <div className="chat">
+        <Chat messages={messages} inputChanged={inputChanged} />
+        <div ref={inputAreaRef}>
+          <TypingIndicator isTyping={isTyping} />
+          {!chatEnded && participantId && (
+            <>
+              <div
+                style={{
+                  height: "1px",
+                  backgroundColor: "grey",
+                  marginLeft: "8px",
+                  marginRight: "8px",
+                }}
+              />
+              <InputArea onSend={sendMessage} />
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

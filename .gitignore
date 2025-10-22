@@ -181,3 +181,9 @@ ollama*
 
 # various data
 knowledge/
+
+# Interview transcripts (keep directory structure, ignore data files)
+transcripts/**/*.md
+transcripts/**/*.json
+!transcripts/README.md
+!transcripts/.gitkeep
