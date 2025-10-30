@@ -48,6 +48,7 @@ export function generateMarkdown({
   messages,
   startTime,
   endTime,
+  summary,
 }) {
   const formattedDate = formatTimestamp(startTime);
   const duration = formatDuration(startTime, endTime);
@@ -105,9 +106,9 @@ ${transcriptLines.join('\n')}
 
 ---
 
-## AI Summary (Optional)
+## AI Summary
 
-[Generate summary here if needed]
+${summary || '[Summary generation failed - please review transcript manually]'}
 `;
 
   return markdown;

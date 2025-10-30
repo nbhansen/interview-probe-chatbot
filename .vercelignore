@@ -1,0 +1,34 @@
+# Vercel Ignore File
+# Files and directories to exclude from Vercel deployment
+
+# Local environment files (configure via Vercel dashboard)
+.env*.local
+.env
+
+# Development files
+.claude/
+knowledge/
+CLAUDE.md
+
+# Transcripts (won't persist on serverless anyway)
+transcripts/
+
+# Git files
+.git/
+.github/
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts (Vercel will rebuild)
+.next/
+node_modules/

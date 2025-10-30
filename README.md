@@ -12,6 +12,7 @@ The original implementation had hardcoded prompts for technostress research. Thi
 Currently included topics:
 - `technostress` - Original CHI 2025 study content
 - `mentalhealth` - Mental health screening with crisis response protocols
+- `adhd` - ADHD screening using ASRS v1.1 framework and Danish ICD-10 guidelines
 
 ### 2. Multi-Provider AI Support
 The original used OpenAI GPT-4o exclusively. This version includes an abstraction layer supporting multiple LLM providers with unified response formatting. Current providers:
@@ -26,7 +27,18 @@ Provider selection is configured via environment variables. The abstraction laye
 - All packages updated to latest stable versions
 - Zero security vulnerabilities
 
-### 4. Enhanced Documentation
+### 4. Local Transcript Storage
+The original version only transmitted transcripts to parent windows (Qualtrics integration). This version adds comprehensive local storage:
+- **Automatic saving**: Conversations saved to filesystem on completion
+- **Participant tracking**: Modal dialog collects participant ID before chat starts
+- **AI-generated summaries**: Each transcript includes an AI-powered conversation summary
+- **Dual format storage**: Both markdown (`.md`) and JSON (`.json`) formats
+- **Organized structure**: Files saved to `transcripts/{topic}/{YYYY-MM}/`
+- **Rich metadata**: Includes participant ID, topic, probe type, stage, timestamps
+
+Transcript saving is handled by `src/app/api/save-transcript/route.js` which uses the AI provider to generate summaries via `src/utils/generateSummary.js`.
+
+### 5. Enhanced Documentation
 Added comprehensive documentation for developers working with the codebase, including architecture details and extension guides.
 
 ## Setup
@@ -42,7 +54,10 @@ Create `.env.local` in the project root:
 ```bash
 AI_PROVIDER=gemini
 API_KEY=your_api_key_here
-MODEL_NAME=gemini-2.0-flash-exp
+MODEL_NAME=gemini-2.5-flash
+
+# Optional: Password protect the demo
+DEMO_PASSWORD=your-secure-password
 ```
 
 Available providers:
@@ -51,7 +66,7 @@ Available providers:
 
 Model examples:
 - OpenAI: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`
-- Gemini: `gemini-2.0-flash-exp`, `gemini-1.5-pro`, `gemini-2.5-flash-preview-0205`
+- Gemini: `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash-exp`, `gemini-1.5-pro`
 
 ### Installation
 
@@ -101,9 +116,38 @@ ADHD screening with idiographic probe and exploration stage:
 http://localhost:3000?p=2&a=1&t=adhd
 ```
 
+### Password Protection
+
+The chatbot supports optional password protection for demos and controlled access:
+
+**How it works:**
+- Set `DEMO_PASSWORD` environment variable to enable protection
+- Visitors see a password gate before accessing the chatbot
+- Authentication is session-based (persists during browser session)
+- If `DEMO_PASSWORD` is not set, password gate is disabled
+
+**Setup:**
+1. Add `DEMO_PASSWORD=your-password` to `.env.local` (local development)
+2. Add `DEMO_PASSWORD` to Vercel environment variables (production)
+3. Share password with authorized demo participants
+
+**Security Note:** This is client-side password protection designed for demos, not production security. It prevents casual access but can be bypassed by determined users.
+
+### Participant Identification
+
+After authentication (if enabled), users must enter a participant ID through a modal dialog. This ID is used for:
+- Organizing transcript files
+- Tracking participants across multiple sessions
+- Associating data with research participants
+
 ### Ending Conversations
 
-Users end conversations by typing `goodbye` (case-insensitive). The system then transmits the conversation history to the parent window if embedded in an iframe.
+Users end conversations by typing `goodbye` (case-insensitive). The system then:
+1. Saves the transcript to local filesystem with AI-generated summary
+2. Transmits conversation history to parent window if embedded in iframe
+3. Displays confirmation message and disables further input
+
+Transcripts are saved to: `transcripts/{topic}/{YYYY-MM}/{participantId}_{topic}_p{probe}_{timestamp}.md`
 
 ## Interview Probe Framework
 
@@ -175,10 +219,52 @@ Original research:
 
 Jacobsen, R. M., Cox, S. R., Griggio, C. F., & van Berkel, N. (2025). Chatbots for Data Collection in Surveys: A Comparison of Four Theory-Based Interview Probes. CHI Conference on Human Factors in Computing Systems (CHI '25), April 26-May 01, 2025, Yokohama, Japan. https://doi.org/10.1145/3706598.3714128
 
+## Deployment
+
+### Vercel (Recommended - Free & Easy)
+
+The easiest way to deploy this chatbot for remote demonstrations:
+
+1. **Push your code to GitHub** (if not already done):
+   ```bash
+   git add .
+   git commit -m "Ready for deployment"
+   git push origin main
+   ```
+
+2. **Deploy to Vercel**:
+   - Go to [vercel.com](https://vercel.com) and sign up with GitHub
+   - Click "Add New Project"
+   - Import your repository
+   - Vercel will auto-detect Next.js settings
+
+3. **Configure environment variables** in Vercel dashboard:
+   - Go to Project Settings → Environment Variables
+   - Add these required variables:
+     - `AI_PROVIDER` = `gemini` (or `openai`)
+     - `API_KEY` = your API key
+     - `MODEL_NAME` = `gemini-2.5-flash` (or your chosen model)
+   - Add optional password protection:
+     - `DEMO_PASSWORD` = your chosen password (e.g., `demo2025`)
+
+4. **Deploy**: Click "Deploy" and wait ~2 minutes
+
+Your chatbot will be live at `https://your-project.vercel.app`
+
+**Note on transcripts**: Vercel uses ephemeral filesystem storage, so transcripts saved during a session won't persist between deployments. The Qualtrics iframe integration (postMessage) will continue to work normally. For persistent storage, consider Railway ($5/month) or add external storage (S3, Firebase).
+
+### Alternative Deployment Options
+
+- **Railway**: ~$5/month, includes persistent disk storage for transcripts
+- **DigitalOcean App Platform**: ~$5/month, good for production use
+- **Docker + VPS**: Full control, requires Docker configuration
+
+See [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more options.
+
 ## Technical Details
 
 - Framework: Next.js 16.0.0 with App Router
 - Language: JavaScript (no TypeScript)
 - Build tool: Turbopack (stable)
 - React version: 19.2 with React Compiler support
-- Deployment: Standard Next.js deployment options (Vercel, Docker, etc.)
+- Deployment: Optimized for Vercel (also supports Docker, traditional hosting)

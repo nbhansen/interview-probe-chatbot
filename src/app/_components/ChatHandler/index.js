@@ -7,8 +7,10 @@ import { addTimeStamp } from "@/utils/addTimeStamp";
 import Chat from "@/app/_components/Chat";
 import TypingIndicator from "@/app/_components/TypingIndicator";
 import ParticipantIdModal from "@/app/_components/ParticipantIdModal";
+import PasswordGate from "@/app/_components/PasswordGate";
 
 const ChatHandler = ({ prompt, initialMessage, InputArea, a, p, condition }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [participantId, setParticipantId] = useState(null);
   const [messages, setMessages] = useState([addTimeStamp(initialMessage)]);
   const [isTyping, setIsTyping] = useState(false);
@@ -138,9 +140,17 @@ const ChatHandler = ({ prompt, initialMessage, InputArea, a, p, condition }) => 
     setParticipantId(id);
   };
 
+  const handleAuthenticated = () => {
+    setIsAuthenticated(true);
+  };
+
   return (
     <>
-      {!participantId && (
+      {!isAuthenticated && (
+        <PasswordGate onAuthenticated={handleAuthenticated} />
+      )}
+
+      {isAuthenticated && !participantId && (
         <ParticipantIdModal onSubmit={handleParticipantIdSubmit} />
       )}
 

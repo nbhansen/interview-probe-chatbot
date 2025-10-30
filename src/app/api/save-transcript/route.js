@@ -1,6 +1,7 @@
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { generateMarkdown, generateFilename } from '@/utils/generateMarkdown';
+import { generateSummary } from '@/utils/generateSummary';
 
 export async function POST(request) {
   try {
@@ -27,6 +28,11 @@ export async function POST(request) {
       );
     }
 
+    // Generate AI summary
+    console.log('Generating AI summary...');
+    const summary = await generateSummary(messages, topic);
+    console.log('Summary generated successfully');
+
     // Generate markdown content
     const markdownContent = generateMarkdown({
       participantId,
@@ -36,6 +42,7 @@ export async function POST(request) {
       messages,
       startTime: startTime || Date.now(),
       endTime: endTime || Date.now(),
+      summary,
     });
 
     // Generate filename
